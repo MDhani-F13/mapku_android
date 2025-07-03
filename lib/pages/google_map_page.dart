@@ -5,7 +5,7 @@ import 'package:geocoding/geocoding.dart';
 
 import '../services/place_service.dart';
 import '../services/traffic_service.dart';
-import '../services/traffic_updater.dart'; 
+import '../services/traffic_updater.dart';
 import '../widgets/closed_road_polyline.dart';
 import '../widgets/closed_road_marker.dart';
 import '../models/traffic_segment.dart';
@@ -22,7 +22,7 @@ class _MapPageState extends State<MapPage> {
   final LatLng _initialPosition = LatLng(-7.2809, 112.7932);
   final _placeService = PlaceService();
   final _trafficService = TrafficService();
-  final TrafficUpdater _trafficUpdater = TrafficUpdater(); // 
+  final TrafficUpdater _trafficUpdater = TrafficUpdater();
 
   double _currentZoom = 15.0;
   Set<Polyline> _polylines = {};
@@ -33,8 +33,8 @@ class _MapPageState extends State<MapPage> {
     super.initState();
     _loadTrafficData();
     _trafficUpdater.startPeriodicUpdates(
-      onUpdate: (segments) {
-        _buildMapObjects(segments);
+      onUpdate: (segments) async { // Pakai async biar bisa await!
+        await _buildMapObjects(segments);
       },
     );
   }
@@ -55,25 +55,35 @@ class _MapPageState extends State<MapPage> {
 
   Future<void> _loadTrafficData() async {
     try {
-      final segments = await _trafficUpdater.loadValidSegments(); 
-      _buildMapObjects(segments);
+      final segments = await _trafficUpdater.loadValidSegments();
+      await _buildMapObjects(segments); // Pakai await!
     } catch (e) {
       print("Failed to load traffic data: $e");
     }
   }
 
-  void _buildMapObjects(List<TrafficSegment> segments) {
+  Future<void> _buildMapObjects(List<TrafficSegment> segments) async {
     final Set<Polyline> polylineSet = {};
     final Set<Marker> markerSet = {};
 
-    for (final segment in segments) {
-      if (segment.fromLat != null && segment.toLat != null) {
+    await Future.wait(segments.map((segment) async {
+      if (segment.fromLat != null && segment.fromLng != null &&
+          segment.toLat != null && segment.toLng != null) {
+
+        if (segment.routePolyline == null || segment.routePolyline!.isEmpty) {
+          final fetched = await TrafficService.fetchPolyline(segment.id);
+          if (fetched != null) {
+            segment.routePolyline = fetched;
+          }
+        }
+
         polylineSet.add(ClosedRoadPolyline.draw(segment));
       }
+
       if (segment.singleLat != null && segment.singleLng != null) {
         markerSet.add(ClosedRoadMarker.build(segment));
       }
-    }
+    }));
 
     setState(() {
       _polylines = polylineSet;
