@@ -7,6 +7,7 @@ import '../services/place_service.dart';
 import '../services/traffic_service.dart';
 import '../services/traffic_updater.dart';
 import '../widgets/closed_road_polyline.dart';
+import '../widgets/closed_road_info_marker.dart';
 import '../widgets/closed_road_marker.dart';
 import '../models/traffic_segment.dart';
 import 'profile_page.dart';
@@ -33,7 +34,7 @@ class _MapPageState extends State<MapPage> {
     super.initState();
     _loadTrafficData();
     _trafficUpdater.startPeriodicUpdates(
-      onUpdate: (segments) async { // Pakai async biar bisa await!
+      onUpdate: (segments) async {
         await _buildMapObjects(segments);
       },
     );
@@ -56,7 +57,7 @@ class _MapPageState extends State<MapPage> {
   Future<void> _loadTrafficData() async {
     try {
       final segments = await _trafficUpdater.loadValidSegments();
-      await _buildMapObjects(segments); // Pakai await!
+      await _buildMapObjects(segments);
     } catch (e) {
       print("Failed to load traffic data: $e");
     }
@@ -78,6 +79,9 @@ class _MapPageState extends State<MapPage> {
         }
 
         polylineSet.add(ClosedRoadPolyline.draw(segment));
+
+        // ➜ Tambah marker info di tengah polyline
+        markerSet.add(ClosedRoadInfoMarker.build(segment));
       }
 
       if (segment.singleLat != null && segment.singleLng != null) {

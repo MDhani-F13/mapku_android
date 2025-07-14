@@ -46,4 +46,6 @@ class TrafficSegment {
       time: json['time'] != null ? DateTime.tryParse(json['time']) : null,
     );
   }
+
+  String get displayRoute => '$fromLocation ➜ $toLocation';
 }

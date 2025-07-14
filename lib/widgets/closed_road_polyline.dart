@@ -8,29 +8,22 @@ class ClosedRoadPolyline {
     List<LatLng> points = [];
 
     if (segment.routePolyline != null && segment.routePolyline!.isNotEmpty) {
-      // Decode encoded polyline from Directions API
       PolylinePoints polylinePoints = PolylinePoints();
       List<PointLatLng> result = polylinePoints.decodePolyline(segment.routePolyline!);
-
       points = result.map((e) => LatLng(e.latitude, e.longitude)).toList();
-    } else {
-      // Fallback: draw straight line from-to
-      if (segment.fromLat != null && segment.fromLng != null &&
-          segment.toLat != null && segment.toLng != null) {
-        points = [
-          LatLng(segment.fromLat!, segment.fromLng!),
-          LatLng(segment.toLat!, segment.toLng!)
-        ];
-      }
+    } else if (segment.fromLat != null && segment.fromLng != null &&
+        segment.toLat != null && segment.toLng != null) {
+      points = [
+        LatLng(segment.fromLat!, segment.fromLng!),
+        LatLng(segment.toLat!, segment.toLng!)
+      ];
     }
 
     return Polyline(
       polylineId: PolylineId('closed_road_${segment.id}'),
       points: points,
-      color: const Color(0xFFE53935), // Merah
+      color: const Color(0xFFE53935),
       width: 5,
     );
   }
 }
-
-
