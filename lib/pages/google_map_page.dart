@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:geocoding/geocoding.dart';
-
+import '../widgets/from_to_search_bar.dart';
+import '../services/directions_service.dart';
 import '../services/place_service.dart';
 import '../services/traffic_service.dart';
 import '../services/traffic_updater.dart';
@@ -24,10 +25,13 @@ class _MapPageState extends State<MapPage> {
   final _placeService = PlaceService();
   final _trafficService = TrafficService();
   final TrafficUpdater _trafficUpdater = TrafficUpdater();
+  final TextEditingController _fromController = TextEditingController();
+  final TextEditingController _toController = TextEditingController();
 
   double _currentZoom = 15.0;
   Set<Polyline> _polylines = {};
   Set<Marker> _markers = {};
+  Set<Polyline> _routePolylines = {};
 
   @override
   void initState() {
@@ -111,7 +115,45 @@ class _MapPageState extends State<MapPage> {
       print("Search error: $e");
     }
   }
+  Future<void> _findRoute() async {
+    try {
+      // Gunakan geocoding basic:
+      final from = await locationFromAddress(_fromController.text);
+      final to = await locationFromAddress(_toController.text);
 
+      if (from.isEmpty || to.isEmpty) {
+        print('Alamat tidak valid');
+        return;
+      }
+
+      final routes = await DirectionsService.getRoutes(
+        from: LatLng(from.first.latitude, from.first.longitude),
+        to: LatLng(to.first.latitude, to.first.longitude),
+      );
+
+      final polylineList = routes.map((r) {
+        return Polyline(
+          polylineId: PolylineId('route_${routes.indexOf(r)}'),
+          points: r,
+          color: const Color(0xFF2196F3), // Biru
+          width: 4,
+        );
+      }).toList();
+
+      setState(() {
+        _routePolylines = polylineList.toSet();
+      });
+
+      // Zoom ke FROM
+      mapController.animateCamera(CameraUpdate.newLatLngZoom(
+        LatLng(from.first.latitude, from.first.longitude),
+        14,
+      ));
+
+    } catch (e) {
+      print('Failed to find route: $e');
+    }
+  }
   void _logout() {
     Navigator.pushReplacementNamed(context, '/login');
   }
