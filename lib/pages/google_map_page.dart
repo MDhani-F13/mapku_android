@@ -2,21 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:geocoding/geocoding.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/place_service.dart';
-import '../services/traffic_service.dart';
 import '../services/traffic_updater.dart';
-import '../services/overlap_checker.dart';
-import '../services/detour_service.dart';
 import '../services/directions_service.dart';
+import '../services/map_object_builder.dart';
+import '../services/overlap_checker.dart';
 
 import '../utils/debug_logger.dart';
 import '../utils/marker_icon_helper.dart';
 
 import '../widgets/closed_road_polyline.dart';
-import '../widgets/closed_road_marker.dart';
-import '../widgets/closed_road_info_marker.dart';
+
 import '../models/traffic_segment.dart';
 
 import 'profile_page.dart';
@@ -32,44 +29,32 @@ class _MapPageState extends State<MapPage> {
   final _placeService = PlaceService();
   final TrafficUpdater _trafficUpdater = TrafficUpdater();
   final TextEditingController _searchController = TextEditingController();
-
   final TextEditingController _fromController = TextEditingController();
   final TextEditingController _toController = TextEditingController();
 
   double _currentZoom = 15.0;
+  bool _isDirectionMode = false;
   Set<Polyline> _polylines = {};
   Set<Marker> _markers = {};
   Set<Polyline> _routePolylines = {};
+  List<TrafficSegment> _segments = [];
 
   bool _showFromTo = false;
-
-  int _directionsRequestCount = 0;
-  final int _maxRequestsPerMonth = 1000;
 
   @override
   void initState() {
     super.initState();
     MarkerIconHelper.instance.loadAll();
     _loadTrafficData();
-    _loadRequestCount();
     _trafficUpdater.startPeriodicUpdates(
       onUpdate: (segments) async {
-        await _buildMapObjects(segments);
+        final (poly, mark) = await MapObjectBuilder.buildMapObjects(segments);
+        setState(() {
+          _polylines = poly;
+          _markers = mark;
+        });
       },
     );
-  }
-
-  Future<void> _loadRequestCount() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _directionsRequestCount = prefs.getInt('directionsRequestCount') ?? 0;
-    });
-  }
-
-  Future<void> _incrementRequestCount() async {
-    final prefs = await SharedPreferences.getInstance();
-    _directionsRequestCount++;
-    await prefs.setInt('directionsRequestCount', _directionsRequestCount);
   }
 
   void _onMapCreated(GoogleMapController controller) {
@@ -88,41 +73,15 @@ class _MapPageState extends State<MapPage> {
 
   Future<void> _loadTrafficData() async {
     try {
-      final segments = await _trafficUpdater.loadValidSegments();
-      await _buildMapObjects(segments);
+      _segments = await _trafficUpdater.loadValidSegments();
+      final (poly, mark) = await MapObjectBuilder.buildMapObjects(_segments);
+      setState(() {
+        _polylines = poly;
+        _markers = mark;
+      });
     } catch (e) {
       DebugLogger().log("Failed to load traffic data: $e");
     }
-  }
-
-  Future<void> _buildMapObjects(List<TrafficSegment> segments) async {
-    final Set<Polyline> polylineSet = {};
-    final Set<Marker> markerSet = {};
-
-    await Future.wait(segments.map((segment) async {
-      if (segment.fromLat != null && segment.fromLng != null &&
-          segment.toLat != null && segment.toLng != null) {
-
-        if (segment.routePolyline == null || segment.routePolyline!.isEmpty) {
-          final fetched = await TrafficService.fetchPolyline(segment.id);
-          if (fetched != null) {
-            segment.routePolyline = fetched;
-          }
-        }
-
-        polylineSet.add(ClosedRoadPolyline.draw(segment));
-        markerSet.add(ClosedRoadInfoMarker.build(segment));
-      }
-
-      if (segment.singleLat != null && segment.singleLng != null) {
-        markerSet.add(ClosedRoadMarker.build(segment));
-      }
-    }));
-
-    setState(() {
-      _polylines = polylineSet;
-      _markers = markerSet;
-    });
   }
 
   Future<void> _searchPlace(String query) async {
@@ -146,190 +105,123 @@ class _MapPageState extends State<MapPage> {
     final stopwatch = Stopwatch()..start();
     await DebugLogger().log('🔵 [_findRoute] Started');
 
+    final fromAddress = _fromController.text.trim();
+    final toAddress = _toController.text.trim();
+
+    await DebugLogger().log('📍 From: "$fromAddress"');
+    await DebugLogger().log('📍 To: "$toAddress"');
+
+    final placeService = PlaceService();
+
+    final sw1 = Stopwatch()..start();
+    final fromLatLng = await placeService.searchPlace(fromAddress);
+    await DebugLogger().log(
+      fromLatLng != null
+        ? '✅ Geocoding FROM success in ${sw1.elapsedMilliseconds}ms'
+        : '❌ Geocoding FROM failed',
+    );
+
+    final sw2 = Stopwatch()..start();
+    final toLatLng = await placeService.searchPlace(toAddress);
+    await DebugLogger().log(
+      toLatLng != null
+        ? '✅ Geocoding TO success in ${sw2.elapsedMilliseconds}ms'
+        : '❌ Geocoding TO failed',
+    );
+
+    if (fromLatLng == null || toLatLng == null) {
+      await DebugLogger().log('❌ Geocoding returned null coordinates → Aborted');
+      return;
+    }
+
     try {
-      final fromAddress = _fromController.text.trim();
-      final toAddress = _toController.text.trim();
-
-      await DebugLogger().log('📍 From: "$fromAddress"');
-      await DebugLogger().log('📍 To: "$toAddress"');
-
-      late List<Location> from;
-      late List<Location> to;
-
-      try {
-        final sw1 = Stopwatch()..start();
-        from = await locationFromAddress(fromAddress).timeout(const Duration(seconds: 10));
-        await DebugLogger().log('✅ Geocoding FROM success in ${sw1.elapsedMilliseconds}ms');
-      } catch (e) {
-        await DebugLogger().log('❌ Geocoding FROM failed: $e');
-        return;
-      }
-
-      try {
-        final sw2 = Stopwatch()..start();
-        to = await locationFromAddress(toAddress).timeout(const Duration(seconds: 10));
-        await DebugLogger().log('✅ Geocoding TO success in ${sw2.elapsedMilliseconds}ms');
-      } catch (e) {
-        await DebugLogger().log('❌ Geocoding TO failed: $e');
-        return;
-      }
-
-      if (from.isEmpty || to.isEmpty) {
-        await DebugLogger().log('❌ Geocoding returned empty result');
-        return;
-      }
-
-      final fromLatLng = LatLng(from.first.latitude, from.first.longitude);
-      final toLatLng = LatLng(to.first.latitude, to.first.longitude);
-
-      await DebugLogger().log(
-        '📌 FROM (${fromLatLng.latitude}, ${fromLatLng.longitude}), '
-        'TO (${toLatLng.latitude}, ${toLatLng.longitude})',
-      );
-
-      final routes = await DirectionsService.getRoutes(
+      final result = await DirectionsService.findRoute(
         from: fromLatLng,
         to: toLatLng,
+        closedPolylines: _polylines,
       );
-
-      await DebugLogger().log('📌 Routes fetched: ${routes.length} alternatives');
-
-      List<Map<String, dynamic>> routeResults = [];
-
-      for (final route in routes) {
-        final overlap = OverlapChecker.detectOverlap(
-          routePolyline: route,
-          closedRoadPolylines: _polylines,
-        );
-        routeResults.add({'route': route, 'overlap': overlap});
-
-        await DebugLogger().log(
-          '🔍 Alt route → hasOverlap: ${overlap.hasOverlap}, '
-          'overlapLength: ${overlap.overlapLength}',
-        );
-      }
-
-      // Urutkan berdasarkan overlap paling sedikit
-      routeResults.sort((a, b) =>
-          a['overlap'].overlapLength.compareTo(b['overlap'].overlapLength));
-
-      final best = routeResults.first;
-      final OverlapResult bestOverlap = best['overlap'];
-      List<LatLng> selectedRoute = best['route'];
-      bool usedFallback = false;
-
-      await DebugLogger().log(
-        '✅ Best candidate → hasOverlap: ${bestOverlap.hasOverlap}, '
-        'overlapLength: ${bestOverlap.overlapLength}',
-      );
-
-      if (bestOverlap.hasOverlap) {
-        await DebugLogger().log(
-          '📍 Best entry idx: ${bestOverlap.entryIndex}, exit idx: ${bestOverlap.exitIndex}',
-        );
-
-        final detour = await DetourService.getDetour(
-          entryPoint: bestOverlap.entryPoint!,
-          exitPoint: bestOverlap.exitPoint!,
-          closedRoadPolylines: _polylines,
-        );
-
-        if (detour != null) {
-          selectedRoute = DirectionsService.mergePolylines(
-            originalRoute: selectedRoute,
-            entryIndex: bestOverlap.entryIndex!,
-            exitIndex: bestOverlap.exitIndex!,
-            detour: detour.detourPolyline,
+      // Tandai segmen overlap jika fallback digunakan
+      if (result.usedFallback) {
+        for (var segment in _segments) {
+          final overlap = OverlapChecker.detectOverlap(
+            routePolyline: result.polyline,
+            closedRoadPolylines: {
+              Polyline(
+                points: segment.routePolyline != null
+                    ? DirectionsService.decodePolyline(segment.routePolyline!)
+                    : [],
+                polylineId: PolylineId('seg_${segment.id}'),
+              ),
+            },
           );
-          await DebugLogger().log(
-            '✅ Detour merged, total points: ${selectedRoute.length}',
-          );
-        } else {
-          await DebugLogger().log(
-            '🚧 Fallback → all detours overlap → use original best & mark warning',
-          );
-          usedFallback = true;
+          if (overlap.hasOverlap) {
+            segment.usedFallback = true;
+          }
         }
-      } else {
-        await DebugLogger().log('✅ Best is clean → use as is');
+
+        final (updatedPolylines, updatedMarkers) = await MapObjectBuilder.buildMapObjects(_segments);
+        setState(() {
+          _polylines = updatedPolylines;
+          _markers = updatedMarkers;
+        });
       }
-
-      // Tampilkan semua alternatif sebagai garis tipis
-      final altPolylines = routes.asMap().entries.map((entry) {
-        return Polyline(
-          polylineId: PolylineId('alt_${entry.key}'),
-          points: entry.value,
-          color: const Color.fromARGB(255, 8, 222, 40),
-          width: 3,
-          zIndex: 0,
-        );
-      }).toSet();
-
       final startIcon = MarkerIconHelper.instance.start ??
           BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
       final endIcon = MarkerIconHelper.instance.end ??
           BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
-      final warningIcon = MarkerIconHelper.instance.warning ??
-          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
-
-      final Set<Marker> updatedMarkers = {
+      final routeMarkers = {
         Marker(
           markerId: const MarkerId('start'),
-          position: fromLatLng,
+          position: result.polyline.first,
           icon: startIcon,
           infoWindow: const InfoWindow(title: 'Titik Awal'),
         ),
         Marker(
           markerId: const MarkerId('end'),
-          position: toLatLng,
+          position: result.polyline.last,
           icon: endIcon,
           infoWindow: const InfoWindow(title: 'Tujuan'),
         ),
       };
-
-      if (usedFallback) {
-        updatedMarkers.add(
-          Marker(
-            markerId: const MarkerId('warning_overlap'),
-            position: bestOverlap.entryPoint!,
-            icon: warningIcon,
-            infoWindow: const InfoWindow(title: '⚠️ Jalur Alternatif Melewati Jalan Ditutup'),
-          ),
-        );
-      }
-
       setState(() {
         _routePolylines = {
           Polyline(
             polylineId: const PolylineId('route_final'),
-            points: selectedRoute,
+            points: result.polyline,
             color: const Color(0xFF2196F3),
-            width: 4,
+            width: 5,
             zIndex: 1,
           ),
-          ...altPolylines
+          ...result.alternatives.map((alt) => Polyline(
+                polylineId: PolylineId('alt_${alt.hashCode}'),
+                points: alt,
+                color: const Color.fromARGB(255, 8, 222, 40),
+                width: 3,
+                zIndex: 0,
+              )),
         };
 
-        _polylines = _polylines.map((p) {
-          return p.copyWith(zIndexParam: 2);
-        }).toSet();
-
-        _markers.addAll(updatedMarkers);
+        _markers.addAll(routeMarkers);
       });
 
-      await DebugLogger().log('🗺️ Polylines & markers updated');
-      mapController.animateCamera(CameraUpdate.newLatLngZoom(fromLatLng, 14));
-      await DebugLogger().log('✅ Camera moved to start point');
-      await DebugLogger().log('🏁 [_findRoute] Finished in ${stopwatch.elapsedMilliseconds}ms');
+      mapController.animateCamera(CameraUpdate.newLatLngBounds(result.bounds, 50));
+      await DebugLogger().log('✅ [_findRoute] Completed in ${stopwatch.elapsedMilliseconds}ms');
     } catch (e, stack) {
       await DebugLogger().log('🔥 [_findRoute] Failed: $e');
       await DebugLogger().log('📄 Stacktrace: $stack');
     }
   }
 
-
-
-
+  void _exitDirectionMode() {
+  setState(() {
+    _isDirectionMode = false;
+    _showFromTo = false;
+    _routePolylines.clear();
+    _markers.removeWhere((m) => m.markerId.value == 'start' || m.markerId.value == 'end');
+    _fromController.clear();
+    _toController.clear();
+  });
+}
   void _logout() {
     Navigator.pushReplacementNamed(context, '/login');
   }
@@ -426,10 +318,19 @@ class _MapPageState extends State<MapPage> {
               radius: 20,
               backgroundColor: Colors.white,
               child: IconButton(
-                icon: const Icon(Icons.directions, size: 20),
+                icon: Icon(
+                  Icons.directions,
+                  size: 20,
+                  color: _isDirectionMode ? Colors.blueGrey : Colors.black,
+                ),
                 onPressed: () {
                   setState(() {
-                    _showFromTo = !_showFromTo;
+                    if (_isDirectionMode) {
+                      _exitDirectionMode();
+                    } else {
+                      _isDirectionMode = true;
+                      _showFromTo = true;
+                    }
                   });
                 },
               ),

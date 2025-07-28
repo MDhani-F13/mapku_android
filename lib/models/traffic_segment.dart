@@ -12,6 +12,7 @@ class TrafficSegment {
   final String? sentence;
   String? routePolyline;
   final DateTime? time;
+  bool? usedFallback;
 
   TrafficSegment({
     required this.id,
@@ -27,6 +28,7 @@ class TrafficSegment {
     this.sentence,
     this.routePolyline,
     this.time,
+    this.usedFallback
   });
 
   factory TrafficSegment.fromJson(Map<String, dynamic> json) {

@@ -24,6 +24,7 @@ class ClosedRoadPolyline {
       points: points,
       color: const Color(0xFFE53935),
       width: 5,
+      zIndex: 2,
     );
   }
 }

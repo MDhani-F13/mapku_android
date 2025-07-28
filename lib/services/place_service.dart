@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:geocoding/geocoding.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../config/api_config.dart';
 
 class PlaceService {
@@ -18,5 +20,16 @@ class PlaceService {
     } else {
       return [];
     }
+  }
+
+  Future<LatLng?> searchPlace(String query) async {
+    try {
+      final locations = await locationFromAddress(query);
+      if (locations.isNotEmpty) {
+        final loc = locations.first;
+        return LatLng(loc.latitude, loc.longitude);
+      }
+    } catch (_) {}
+    return null;
   }
 }
