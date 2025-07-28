@@ -3,34 +3,59 @@ import 'package:http/http.dart' as http;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../config/api_config.dart';
+import '../utils/debug_logger.dart'; 
 
 class DirectionsService {
   static Future<List<List<LatLng>>> getRoutes({
     required LatLng from,
     required LatLng to,
   }) async {
-    final baseUrl = 'https://maps.googleapis.com/maps/api/directions/json';
+    const baseUrl = 'https://maps.googleapis.com/maps/api/directions/json';
     final url = '$baseUrl?origin=${from.latitude},${from.longitude}'
         '&destination=${to.latitude},${to.longitude}'
         '&alternatives=true'
         '&key=${ApiConfig.googleMapsApiKey}';
 
-    final response = await http.get(Uri.parse(url));
-    if (response.statusCode != 200) {
-      throw Exception('Failed to fetch directions');
+    await DebugLogger().log('🌐 [DirectionsService] Requesting: $url');
+
+    try {
+      final response = await http
+          .get(Uri.parse(url))
+          .timeout(const Duration(seconds: 10));
+
+      await DebugLogger().log('📦 [DirectionsService] HTTP ${response.statusCode}');
+
+      if (response.statusCode != 200) {
+        await DebugLogger().log('❌ [DirectionsService] Bad status code: ${response.statusCode}');
+        throw Exception('Failed to fetch directions');
+      }
+
+      final data = jsonDecode(response.body);
+      final status = data['status'];
+
+      await DebugLogger().log('🔍 [DirectionsService] Response status: $status');
+
+      if (status != 'OK') {
+        await DebugLogger().log('⚠️ [DirectionsService] Directions API error: $status');
+        throw Exception('Directions API error: $status');
+      }
+
+      final routes = data['routes'] as List;
+
+      await DebugLogger().log('✅ [DirectionsService] Routes found: ${routes.length}');
+
+      List<List<LatLng>> polylines = [];
+
+      for (var route in routes) {
+        final encoded = route['overview_polyline']['points'];
+        polylines.add(_decodePolyline(encoded));
+      }
+
+      return polylines;
+    } catch (e, stack) {
+      await DebugLogger().log('🔥 [DirectionsService] Exception: $e\n$stack');
+      rethrow;
     }
-
-    final data = jsonDecode(response.body);
-    final routes = data['routes'] as List;
-
-    List<List<LatLng>> polylines = [];
-
-    for (var route in routes) {
-      final encoded = route['overview_polyline']['points'];
-      polylines.add(_decodePolyline(encoded));
-    }
-
-    return polylines;
   }
 
   static List<LatLng> _decodePolyline(String encoded) {
@@ -58,10 +83,22 @@ class DirectionsService {
       int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
       lng += dlng;
 
-      points.add(
-        LatLng(lat / 1e5, lng / 1e5),
-      );
+      points.add(LatLng(lat / 1e5, lng / 1e5));
     }
+
     return points;
+  }
+
+  static List<LatLng> mergePolylines({
+    required List<LatLng> originalRoute,
+    required int entryIndex,
+    required int exitIndex,
+    required List<LatLng> detour,
+  }) {
+    final List<LatLng> merged = [];
+    merged.addAll(originalRoute.sublist(0, entryIndex + 1));
+    merged.addAll(detour);
+    merged.addAll(originalRoute.sublist(exitIndex));
+    return merged;
   }
 }

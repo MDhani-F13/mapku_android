@@ -44,6 +44,8 @@ dependencies:
   flutter_typeahead: ^4.3.7
   flutter_polyline_points: ^1.0.0
   google_polyline_algorithm: 3.1.0
+  path_provider: ^2.0.15
+  intl: any
   
 dev_dependencies:
   flutter_test:
@@ -69,6 +71,11 @@ flutter:
   assets:
     - .env
     - assets/default_profile.png
+    - assets/icons/start.png
+    - assets/icons/end.png
+    - assets/icons/warning.png
+    - assets/icons/closed.png
+    - assets/logo.png
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

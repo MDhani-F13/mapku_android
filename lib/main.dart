@@ -5,10 +5,12 @@ import 'pages/register_page.dart';
 import 'pages/google_map_page.dart';
 import 'pages/profile_page.dart';
 import 'connection/auth_service.dart';
+import 'utils/marker_icon_helper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env"); 
+  await MarkerIconHelper().loadAll();
   runApp(MyApp());
 }
 
