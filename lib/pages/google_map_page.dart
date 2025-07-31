@@ -12,8 +12,6 @@ import '../services/overlap_checker.dart';
 import '../utils/debug_logger.dart';
 import '../utils/marker_icon_helper.dart';
 
-import '../widgets/closed_road_polyline.dart';
-
 import '../models/traffic_segment.dart';
 
 import 'profile_page.dart';

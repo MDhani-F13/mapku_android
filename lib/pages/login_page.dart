@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../connection/auth_service.dart';
 import '../widgets/custom_button.dart';
-import 'google_map_page.dart';
+import 'map/map_page.dart';
 import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {

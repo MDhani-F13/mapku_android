@@ -24,7 +24,7 @@ class MarkerIconHelper {
   }
 
   Future<BitmapDescriptor> _load(String asset) async {
-    return await BitmapDescriptor.fromAssetImage(
+    return await BitmapDescriptor.asset(
       const ImageConfiguration(size: Size(48, 48)),
       asset,
     );

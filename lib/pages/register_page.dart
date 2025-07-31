@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../connection/auth_service.dart';
 import '../widgets/custom_button.dart';
-import 'login_page.dart';
 
 class RegisterPage extends StatefulWidget {
   @override
