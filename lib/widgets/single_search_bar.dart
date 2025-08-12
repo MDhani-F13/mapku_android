@@ -18,28 +18,34 @@ class SingleSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      elevation: 3,
+    final theme = Theme.of(context);
+
+    return Material(
+      elevation: 6,
+      borderRadius: BorderRadius.circular(16),
+      color: Colors.white,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         child: TypeAheadField<String>(
-          textFieldConfiguration: TextFieldConfiguration(
-            controller: controller,
-            decoration: InputDecoration(
-              hintText: hintText,
-              border: InputBorder.none,
-              prefixIcon: const Icon(Icons.search),
-            ),
-          ),
           suggestionsCallback: (pattern) async {
             return await _placeService.fetchSuggestions(pattern);
           },
           itemBuilder: (context, suggestion) => ListTile(
+            leading: const Icon(Icons.location_on_outlined),
             title: Text(suggestion),
           ),
           onSuggestionSelected: onSuggestionSelected,
+          textFieldConfiguration: TextFieldConfiguration(
+            controller: controller,
+            decoration: InputDecoration(
+              hintText: hintText,
+              prefixIcon: const Icon(Icons.search),
+              contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
         ),
       ),
     );

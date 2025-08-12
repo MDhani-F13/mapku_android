@@ -18,20 +18,28 @@ class FromToSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.all(10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      elevation: 3,
+    final theme = Theme.of(context);
+
+    return Material(
+      elevation: 6,
+      borderRadius: BorderRadius.circular(16),
+      color: Colors.white,
       child: Padding(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
+            // 📍 From
             TypeAheadField<String>(
               textFieldConfiguration: TextFieldConfiguration(
                 controller: fromController,
-                decoration: const InputDecoration(
-                  labelText: 'Dari mana?',
-                  prefixIcon: Icon(Icons.location_on),
+                decoration: InputDecoration(
+                  hintText: 'Dari mana?',
+                  prefixIcon: const Icon(Icons.location_on_outlined),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
               suggestionsCallback: (pattern) async {
@@ -43,13 +51,20 @@ class FromToSearchBar extends StatelessWidget {
                 fromController.text = suggestion;
               },
             ),
-            const SizedBox(height: 8),
+
+            const SizedBox(height: 12),
+
+            // 🏁 To
             TypeAheadField<String>(
               textFieldConfiguration: TextFieldConfiguration(
                 controller: toController,
-                decoration: const InputDecoration(
-                  labelText: 'Ke mana?',
-                  prefixIcon: Icon(Icons.flag),
+                decoration: InputDecoration(
+                  hintText: 'Ke mana?',
+                  prefixIcon: const Icon(Icons.flag_outlined),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
               suggestionsCallback: (pattern) async {
@@ -61,11 +76,25 @@ class FromToSearchBar extends StatelessWidget {
                 toController.text = suggestion;
               },
             ),
-            const SizedBox(height: 8),
-            ElevatedButton.icon(
-              onPressed: onFindRoute,
-              icon: const Icon(Icons.directions),
-              label: const Text('Cari Rute'),
+
+            const SizedBox(height: 16),
+
+            // 🧭 Find Route Button
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: FilledButton.icon(
+                onPressed: onFindRoute,
+                icon: const Icon(Icons.directions),
+                label: const Text('Cari Rute'),
+                style: FilledButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: Colors.white,
+                ),
+              ),
             )
           ],
         ),

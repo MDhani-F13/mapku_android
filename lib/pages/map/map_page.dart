@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../widgets/from_to_search_bar.dart';
-import '../../widgets/map_controls.dart';
 import '../../widgets/single_search_bar.dart';
-
 import 'map_view.dart';
-import '../login_page.dart';
+import '../../widgets/zoom_buttons.dart';
+import '../../widgets/direction_controls.dart';
+import '../../widgets/profile_button.dart';
+
 import '../profile_page.dart';
 
 import '../../controllers/map_controller.dart';
@@ -14,8 +15,10 @@ import '../../controllers/route_manager.dart';
 import '../../controllers/traffic_controller.dart';
 
 import '../../models/traffic_segment.dart';
-
+import '../../models/search_history_entry.dart';
 import '../../utils/marker_icon_helper.dart';
+
+import '../../services/search_history_service.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -31,10 +34,11 @@ class _MapPageState extends State<MapPage> {
   final singleSearchController = TextEditingController();
 
   late final TrafficController trafficController;
-  late final RouteManager routeManager;
 
   bool isDirectionMode = false;
   List<TrafficSegment> segments = [];
+
+  final _historyService = SearchHistoryService();
 
   @override
   void initState() {
@@ -44,7 +48,6 @@ class _MapPageState extends State<MapPage> {
 
   void _initTraffic() async {
     await MarkerIconHelper.instance.loadAll();
-
     trafficController = TrafficController();
     trafficController.start(
       onUpdate: (polylines, markers) {
@@ -59,7 +62,7 @@ class _MapPageState extends State<MapPage> {
     if (!isDirectionMode) {
       mapController.clearDirectionPolylines();
       mapController.clearDirectionMarkers();
-      _initTraffic(); 
+      _initTraffic();
     }
   }
 
@@ -78,11 +81,27 @@ class _MapPageState extends State<MapPage> {
       mapController.setDirectionPolylines(polylines);
       mapController.setDirectionMarkers(markers);
       mapController.moveTo(result.polyline.first);
+
+      await _historyService.addEntry(
+        SearchHistoryEntry(
+          type: 'from_to',
+          query: '${fromController.text} → ${toController.text}',
+          timestamp: DateTime.now(),
+        ),
+      );
     }
   }
 
-  void _onSingleSearchSelected(String place) {
+  void _onSingleSearchSelected(String place) async {
     mapController.moveToAddress(place);
+
+    await _historyService.addEntry(
+      SearchHistoryEntry(
+        type: 'single',
+        query: place,
+        timestamp: DateTime.now(),
+      ),
+    );
   }
 
   @override
@@ -97,73 +116,104 @@ class _MapPageState extends State<MapPage> {
 
   @override
   Widget build(BuildContext context) {
+    final topInset = MediaQuery.of(context).padding.top;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Peta Surabaya"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: "Logout",
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => LoginPage()),
-              );
-            },
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          AnimatedBuilder(
-            animation: mapController,
-            builder: (context, _) => MapView(
-              initialPosition: const LatLng(-7.2575, 112.7521), // Surabaya
-              zoom: 12.0,
-              onMapCreated: (controller) {
-                if (!mapController.hasController) {
-                  mapController.setController(controller);
-                  mapController.moveToUserLocation(); // Pindah ke lokasi user
-                }
-              },
-              markers: mapController.markers,
-              polylines: mapController.polylines,
-            ),
-          ),
-          if (isDirectionMode)
-            Positioned(
-              top: 40,
-              left: 0,
-              right: 0,
-              child: FromToSearchBar(
-                fromController: fromController,
-                toController: toController,
-                onFindRoute: _findRoute,
+      extendBodyBehindAppBar: true,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return Stack(
+            children: [
+              /// 🌍 Map View
+              AnimatedBuilder(
+                animation: mapController,
+                builder: (context, _) => MapView(
+                  initialPosition: const LatLng(-7.2575, 112.7521),
+                  zoom: 12.0,
+                  onMapCreated: (controller) {
+                    if (!mapController.hasController) {
+                      mapController.setController(controller);
+                      mapController.moveToUserLocation();
+                    }
+                  },
+                  markers: mapController.markers,
+                  polylines: mapController.polylines,
+                ),
               ),
-            )
-          else
-            Positioned(
-              top: 40,
-              left: 0,
-              right: 0,
-              child: SingleSearchBar(
-                controller: singleSearchController,
-                onSuggestionSelected: _onSingleSearchSelected,
+
+              /// 🔍 Search + Direction Toggle
+              Positioned(
+                top: topInset + 76,
+                left: 16,
+                right: 16,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        switchInCurve: Curves.easeOut,
+                        switchOutCurve: Curves.easeIn,
+                        transitionBuilder: (child, animation) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: SizeTransition(
+                              sizeFactor: animation,
+                              axisAlignment: -1.0,
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: isDirectionMode
+                            ? FromToSearchBar(
+                                key: const ValueKey('fromTo'),
+                                fromController: fromController,
+                                toController: toController,
+                                onFindRoute: _findRoute,
+                              )
+                            : SingleSearchBar(
+                                key: const ValueKey('single'),
+                                controller: singleSearchController,
+                                onSuggestionSelected: _onSingleSearchSelected,
+                              ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    DirectionControls(
+                      isDirectionMode: isDirectionMode,
+                      onToggle: _toggleDirectionMode,
+                    ),
+                  ],
+                ),
               ),
-            ),
-          MapControls(
-            onZoomIn: mapController.zoomIn,
-            onZoomOut: mapController.zoomOut,
-            onToggleDirectionMode: _toggleDirectionMode,
-            onOpenProfile: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => ProfilePage()),
-              );
-            },
-            isDirectionMode: isDirectionMode,
-          ),
-        ],
+
+              /// 👤 Profile Button (Bottom Left)
+              Positioned(
+                bottom: 100,
+                left: 16,
+                child: ProfileButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ProfilePage()),
+                    );
+                  },
+                ),
+              ),
+
+              /// 🔍 Zoom Buttons (Bottom Right)
+              Positioned(
+                bottom: 100,
+                right: 16,
+                child: ZoomButtons(
+                  onZoomIn: mapController.zoomIn,
+                  onZoomOut: mapController.zoomOut,
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
