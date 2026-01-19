@@ -24,13 +24,13 @@ class RouteManager {
   Future<RouteResult?> findRouteFromAddress(String from, String to) async {
     final placeService = PlaceService();
 
-    final fromLatLng = await placeService.searchPlace(from);
+    final fromLatLng = await placeService.searchPlaceFromText(from);
     if (fromLatLng == null) {
       await DebugLogger().log('❌ Geocoding FROM failed');
       return null;
     }
 
-    final toLatLng = await placeService.searchPlace(to);
+    final toLatLng = await placeService.searchPlaceFromText(to);
     if (toLatLng == null) {
       await DebugLogger().log('❌ Geocoding TO failed');
       return null;

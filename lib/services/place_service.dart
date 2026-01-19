@@ -6,6 +6,7 @@ import '../config/api_config.dart';
 
 class PlaceService {
   final String baseUrl = "https://maps.googleapis.com/maps/api/place/autocomplete/json";
+  final String textSearchUrl = "https://maps.googleapis.com/maps/api/place/textsearch/json";
 
   Future<List<String>> fetchSuggestions(String input) async {
     final response = await http.get(Uri.parse(
@@ -21,8 +22,21 @@ class PlaceService {
       return [];
     }
   }
+Future<LatLng?> searchPlaceFromText(String query) async {
+    final url =
+      "$textSearchUrl?query=${Uri.encodeComponent(query)}&language=id&region=id&key=${ApiConfig.googleMapsApiKey}";
 
-  Future<LatLng?> searchPlace(String query) async {
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode != 200) return null;
+
+    final data = jsonDecode(response.body);
+    if (data["results"] == null || data["results"].isEmpty) return null;
+
+    final loc = data["results"][0]["geometry"]["location"];
+    return LatLng(loc["lat"], loc["lng"]);
+  }
+
+  Future<LatLng?> searchPlaceFallback(String query) async {
     try {
       final locations = await locationFromAddress(query);
       if (locations.isNotEmpty) {

@@ -35,8 +35,13 @@ class SingleSearchBar extends StatelessWidget {
             title: Text(suggestion),
           ),
           onSuggestionSelected: onSuggestionSelected,
+          
           textFieldConfiguration: TextFieldConfiguration(
             controller: controller,
+            textInputAction: TextInputAction.search,
+            onSubmitted: (value) {
+              onSuggestionSelected(value); 
+            },
             decoration: InputDecoration(
               hintText: hintText,
               prefixIcon: const Icon(Icons.search),

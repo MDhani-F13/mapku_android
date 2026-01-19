@@ -19,6 +19,7 @@ import '../../models/search_history_entry.dart';
 import '../../utils/marker_icon_helper.dart';
 
 import '../../services/search_history_service.dart';
+import '../../services/place_service.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -33,6 +34,7 @@ class _MapPageState extends State<MapPage> {
   final toController = TextEditingController();
   final singleSearchController = TextEditingController();
 
+  final _placeService = PlaceService();
   late final TrafficController trafficController;
 
   bool isDirectionMode = false;
@@ -93,15 +95,24 @@ class _MapPageState extends State<MapPage> {
   }
 
   void _onSingleSearchSelected(String place) async {
-    mapController.moveToAddress(place);
+    LatLng? result = await _placeService.searchPlaceFromText(place);
+    result ??= await _placeService.searchPlaceFallback(place);
 
-    await _historyService.addEntry(
-      SearchHistoryEntry(
-        type: 'single',
-        query: place,
-        timestamp: DateTime.now(),
-      ),
-    );
+    if (result != null) {
+      mapController.moveTo(result);
+
+      await _historyService.addEntry(
+        SearchHistoryEntry(
+          type: 'single',
+          query: place,
+          timestamp: DateTime.now(),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Lokasi tidak ditemukan")),
+      );
+    }
   }
 
   @override
