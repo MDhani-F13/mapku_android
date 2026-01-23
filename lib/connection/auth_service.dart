@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/api_config.dart';
 
 class AuthService {
-  final String baseUrl = "http://10.0.2.2:8000/api"; 
+  final String baseUrl = ApiConfig.baseUrl;
 
   // Login User
   Future<bool> login(String username, String password) async {
