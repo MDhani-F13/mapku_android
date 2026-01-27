@@ -104,15 +104,21 @@ class RouteManager {
       Polyline(
         polylineId: const PolylineId('route_final'),
         points: result.polyline,
-        color: const Color(0xFF2196F3),
+        color: const Color(0xFF1E88E5), // slightly softer blue
         width: 5,
+        startCap: Cap.roundCap,
+        endCap: Cap.roundCap,
+        jointType: JointType.round,
         zIndex: 1,
       ),
       ...result.alternatives.map((alt) => Polyline(
             polylineId: PolylineId('alt_${alt.hashCode}'),
             points: alt,
-            color: const Color.fromARGB(255, 8, 222, 40),
+            color: const Color(0xFF43A047),
             width: 3,
+            startCap: Cap.roundCap,
+            endCap: Cap.roundCap,
+            jointType: JointType.round,
             zIndex: 0,
           ))
     };

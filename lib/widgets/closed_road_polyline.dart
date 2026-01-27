@@ -4,27 +4,53 @@ import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import '../models/traffic_segment.dart';
 
 class ClosedRoadPolyline {
-  static Polyline draw(TrafficSegment segment) {
+  static List<Polyline> draw(TrafficSegment segment) {
     List<LatLng> points = [];
 
-    if (segment.routePolyline != null && segment.routePolyline!.isNotEmpty) {
-      PolylinePoints polylinePoints = PolylinePoints();
-      List<PointLatLng> result = polylinePoints.decodePolyline(segment.routePolyline!);
-      points = result.map((e) => LatLng(e.latitude, e.longitude)).toList();
-    } else if (segment.fromLat != null && segment.fromLng != null &&
-        segment.toLat != null && segment.toLng != null) {
+    if (segment.routePolyline?.isNotEmpty == true) {
+      final polylinePoints = PolylinePoints();
+      final result =
+          polylinePoints.decodePolyline(segment.routePolyline!);
+      points = result
+          .map((e) => LatLng(e.latitude, e.longitude))
+          .toList();
+    } else if (segment.fromLat != null &&
+        segment.fromLng != null &&
+        segment.toLat != null &&
+        segment.toLng != null) {
       points = [
         LatLng(segment.fromLat!, segment.fromLng!),
-        LatLng(segment.toLat!, segment.toLng!)
+        LatLng(segment.toLat!, segment.toLng!),
       ];
     }
 
-    return Polyline(
-      polylineId: PolylineId('closed_road_${segment.id}'),
-      points: points,
-      color: const Color(0xFFE53935),
-      width: 5,
-      zIndex: 2,
-    );
+    if (points.isEmpty) return [];
+
+    return [
+      // 🖤 Shadow / outline
+      Polyline(
+        polylineId: PolylineId('closed_road_shadow_${segment.id}'),
+        points: points,
+        color: Colors.black.withOpacity(0.35),
+        width: 8,
+        startCap: Cap.roundCap,
+        endCap: Cap.roundCap,
+        jointType: JointType.round,
+        zIndex: 1,
+      ),
+
+      // 🔴 Main closed road line
+      Polyline(
+        polylineId: PolylineId('closed_road_${segment.id}'),
+        points: points,
+        color: const Color(0xFFD32F2F),
+        width: 4,
+        startCap: Cap.roundCap,
+        endCap: Cap.roundCap,
+        jointType: JointType.round,
+        zIndex: 2,
+      ),
+    ];
   }
 }
+

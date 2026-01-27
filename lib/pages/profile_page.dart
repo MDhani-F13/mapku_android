@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-
 import '../models/search_history_entry.dart';
 import '../services/search_history_service.dart';
 import '../services/user_service.dart';
@@ -38,16 +36,12 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     final userData = await UserService().getProfile(token);
-    if (userData != null) {
-      setState(() {
-        username = userData['username'];
-        email = userData['email'];
-        profileImageUrl = userData['profile_picture'];
-        isLoading = false;
-      });
-    } else {
-      setState(() => isLoading = false);
-    }
+    setState(() {
+      username = userData?['username'];
+      email = userData?['email'];
+      profileImageUrl = userData?['profile_picture'];
+      isLoading = false;
+    });
   }
 
   void loadSearchHistory() async {
@@ -69,92 +63,117 @@ class _ProfilePageState extends State<ProfilePage> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Profil Saya")),
+      appBar: AppBar(
+        title: const Text("Profil"),
+        centerTitle: true,
+      ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
+          : ListView(
               padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Foto profil dan data pengguna
-                  Center(
+              children: [
+                // ================= PROFILE CARD =================
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
                     child: Column(
                       children: [
                         CircleAvatar(
-                          radius: 50,
-                          backgroundImage: profileImageUrl != null && profileImageUrl!.isNotEmpty
-                              ? NetworkImage(profileImageUrl!)
-                              : const AssetImage('assets/default_profile.png') as ImageProvider,
+                          radius: 48,
+                          backgroundImage:
+                              profileImageUrl?.isNotEmpty == true
+                                  ? NetworkImage(profileImageUrl!)
+                                  : const AssetImage(
+                                          'assets/default_profile.png')
+                                      as ImageProvider,
                         ),
                         const SizedBox(height: 16),
                         Text(
                           username ?? '-',
-                          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                          style: theme.textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
-                        const SizedBox(height: 8),
-                        Text(email ?? '-', style: theme.textTheme.bodyMedium),
+                        const SizedBox(height: 6),
+                        Text(
+                          email ?? '-',
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(color: Colors.grey),
+                        ),
                       ],
                     ),
                   ),
+                ),
 
-                  const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
-                  // Filter radio button
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      "Riwayat Pencarian",
-                      style: theme.textTheme.titleMedium,
+                // ================= SEARCH HISTORY =================
+                Card(
+                  elevation: 1,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Riwayat Pencarian",
+                          style: theme.textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Filter chips (modern replacement for RadioListTile)
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            ChoiceChip(
+                              label: const Text("Single"),
+                              selected: selectedFilter == 'single',
+                              onSelected: (_) {
+                                setState(() => selectedFilter = 'single');
+                              },
+                            ),
+                            ChoiceChip(
+                              label: const Text("From–To"),
+                              selected: selectedFilter == 'from_to',
+                              onSelected: (_) {
+                                setState(() => selectedFilter = 'from_to');
+                              },
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        SearchHistoryList(entries: filteredEntries),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: RadioListTile(
-                          title: const Text("Single"),
-                          value: 'single',
-                          groupValue: selectedFilter,
-                          onChanged: (val) {
-                            setState(() => selectedFilter = val!);
-                          },
-                        ),
-                      ),
-                      Expanded(
-                        child: RadioListTile(
-                          title: const Text("From-To"),
-                          value: 'from_to',
-                          groupValue: selectedFilter,
-                          onChanged: (val) {
-                            setState(() => selectedFilter = val!);
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
+                ),
 
-                  const SizedBox(height: 8),
-                  // Daftar riwayat
-                  SearchHistoryList(entries: filteredEntries),
+                const SizedBox(height: 32),
 
-                  const SizedBox(height: 24),
-                  // Logout button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _logout,
-                      icon: const Icon(Icons.logout),
-                      label: const Text("Logout"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
+                // ================= LOGOUT =================
+                OutlinedButton.icon(
+                  onPressed: _logout,
+                  icon: const Icon(Icons.logout),
+                  label: const Text("Logout"),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                  )
-                ],
-              ),
+                  ),
+                ),
+              ],
             ),
     );
   }

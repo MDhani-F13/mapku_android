@@ -27,9 +27,8 @@ class MapObjectBuilder {
 
         // Tambahkan polyline ke peta
         final polyline = ClosedRoadPolyline.draw(segment);
-        if (polyline.points.isNotEmpty) {
-          polylineSet.add(polyline);
-        }
+          polylineSet.addAll(polyline);
+        
 
         // Tambahkan marker ikon (warning jika usedFallback)
         markerSet.add(
