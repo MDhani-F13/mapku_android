@@ -16,89 +16,107 @@ class FromToSearchBar extends StatelessWidget {
 
   final PlaceService _placeService = PlaceService();
 
+  InputDecoration _decoration(
+    BuildContext context, {
+    required String hint,
+    required IconData icon,
+  }) {
+    return InputDecoration(
+      hintText: hint,
+      prefixIcon: Icon(icon),
+      filled: true,
+      fillColor: Theme.of(context).colorScheme.surfaceVariant,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide.none,
+      ),
+      contentPadding:
+          const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Material(
-      elevation: 6,
-      borderRadius: BorderRadius.circular(16),
-      color: Colors.white,
+      elevation: 4,
+      borderRadius: BorderRadius.circular(20),
+      color: theme.colorScheme.surface,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 📍 From
+            // 📍 FROM
             TypeAheadField<String>(
               textFieldConfiguration: TextFieldConfiguration(
                 controller: fromController,
-                decoration: InputDecoration(
-                  hintText: 'Dari mana?',
-                  prefixIcon: const Icon(Icons.location_on_outlined),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                decoration: _decoration(
+                  context,
+                  hint: 'Dari mana?',
+                  icon: Icons.trip_origin,
                 ),
               ),
-              suggestionsCallback: (pattern) async {
-                return await _placeService.fetchSuggestions(pattern);
-              },
-              itemBuilder: (context, suggestion) =>
-                  ListTile(title: Text(suggestion)),
-              onSuggestionSelected: (suggestion) {
-                fromController.text = suggestion;
+              suggestionsCallback: _placeService.fetchSuggestions,
+              itemBuilder: _suggestionTile,
+              onSuggestionSelected: (val) {
+                fromController.text = val;
               },
             ),
 
             const SizedBox(height: 12),
 
-            // 🏁 To
+            // subtle divider
+            const Divider(height: 1),
+
+            const SizedBox(height: 12),
+
+            // 🏁 TO
             TypeAheadField<String>(
               textFieldConfiguration: TextFieldConfiguration(
                 controller: toController,
-                decoration: InputDecoration(
-                  hintText: 'Ke mana?',
-                  prefixIcon: const Icon(Icons.flag_outlined),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                decoration: _decoration(
+                  context,
+                  hint: 'Ke mana?',
+                  icon: Icons.flag_outlined,
                 ),
               ),
-              suggestionsCallback: (pattern) async {
-                return await _placeService.fetchSuggestions(pattern);
-              },
-              itemBuilder: (context, suggestion) =>
-                  ListTile(title: Text(suggestion)),
-              onSuggestionSelected: (suggestion) {
-                toController.text = suggestion;
+              suggestionsCallback: _placeService.fetchSuggestions,
+              itemBuilder: _suggestionTile,
+              onSuggestionSelected: (val) {
+                toController.text = val;
               },
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
 
-            // 🧭 Find Route Button
+            // 🧭 FIND ROUTE
             SizedBox(
               width: double.infinity,
-              height: 44,
+              height: 46,
               child: FilledButton.icon(
                 onPressed: onFindRoute,
                 icon: const Icon(Icons.directions),
                 label: const Text('Cari Rute'),
                 style: FilledButton.styleFrom(
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: Colors.white,
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _suggestionTile(BuildContext context, String suggestion) {
+    return ListTile(
+      leading: const Icon(Icons.location_on_outlined),
+      title: Text(suggestion),
+      dense: true,
     );
   }
 }

@@ -30,7 +30,7 @@ class MapObjectBuilder {
           polylineSet.addAll(polyline);
         
 
-        // Tambahkan marker ikon (warning jika usedFallback)
+        // Tambahkan marker ikon 
         markerSet.add(
           ClosedRoadInfoMarker.build(segment, isWarning: segment.usedFallback == true),
         );
