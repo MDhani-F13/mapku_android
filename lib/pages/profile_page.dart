@@ -4,6 +4,7 @@ import '../services/search_history_service.dart';
 import '../services/user_service.dart';
 import '../connection/auth_service.dart';
 import '../widgets/search_history_list.dart';
+import '../widgets/logout_button.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -73,10 +74,13 @@ class _ProfilePageState extends State<ProfilePage> {
               padding: const EdgeInsets.all(20),
               children: [
                 // ================= PROFILE CARD =================
-                Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
+                Container(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceVariant.withOpacity(0.4),
                     borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.black.withOpacity(0.05),
+                      ),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(20),
@@ -91,7 +95,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                           'assets/default_profile.png')
                                       as ImageProvider,
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 20),
                         Text(
                           username ?? '-',
                           style: theme.textTheme.titleLarge
@@ -101,7 +105,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         Text(
                           email ?? '-',
                           style: theme.textTheme.bodyMedium
-                              ?.copyWith(color: Colors.grey),
+                              ?.copyWith(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7)),
                         ),
                       ],
                     ),
@@ -111,11 +115,14 @@ class _ProfilePageState extends State<ProfilePage> {
                 const SizedBox(height: 24),
 
                 // ================= SEARCH HISTORY =================
-                Card(
-                  elevation: 1,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.black.withOpacity(0.05),
+                        ),
+                    ),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -126,7 +133,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           style: theme.textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w600),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 28),
 
                         // Filter chips (modern replacement for RadioListTile)
                         Wrap(
@@ -134,6 +141,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           children: [
                             ChoiceChip(
                               label: const Text("Single"),
+                              selectedColor: theme.colorScheme.primary.withOpacity(0.15),
                               selected: selectedFilter == 'single',
                               onSelected: (_) {
                                 setState(() => selectedFilter = 'single');
@@ -141,6 +149,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                             ChoiceChip(
                               label: const Text("From–To"),
+                              selectedColor: theme.colorScheme.primary.withOpacity(0.15),
                               selected: selectedFilter == 'from_to',
                               onSelected: (_) {
                                 setState(() => selectedFilter = 'from_to');
@@ -160,19 +169,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 const SizedBox(height: 32),
 
                 // ================= LOGOUT =================
-                OutlinedButton.icon(
-                  onPressed: _logout,
-                  icon: const Icon(Icons.logout),
-                  label: const Text("Logout"),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    side: const BorderSide(color: Colors.red),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                ),
+                LogoutButton(onPressed: _logout),
               ],
             ),
     );

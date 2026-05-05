@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 
 class ZoomButtons extends StatelessWidget {
   final VoidCallback onZoomIn;
@@ -16,25 +17,40 @@ class ZoomButtons extends StatelessWidget {
     const cornerRadius = 14.0;
 
     Widget zoomButton(IconData icon, VoidCallback onPressed) {
-      return Material(
-        color: Colors.white,
-        shape: RoundedRectangleBorder(
+  final theme = Theme.of(context);
+
+  return ClipRRect(
+    borderRadius: BorderRadius.circular(cornerRadius),
+    child: BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+      child: Container(
+        width: buttonSize,
+        height: buttonSize,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface.withOpacity(0.75),
           borderRadius: BorderRadius.circular(cornerRadius),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.15),
+          ),
         ),
-        elevation: 4,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(cornerRadius),
-          onTap: onPressed,
-          child: SizedBox(
-            width: buttonSize,
-            height: buttonSize,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(cornerRadius),
+            onTap: onPressed,
             child: Center(
-              child: Icon(icon, size: 22, color: Colors.black87),
+              child: Icon(
+                icon,
+                size: 22,
+                color: Colors.black87,
+              ),
             ),
           ),
         ),
-      );
-    }
+      ),
+    ),
+  );
+}
 
     return Column(
       mainAxisSize: MainAxisSize.min,

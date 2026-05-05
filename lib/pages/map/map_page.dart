@@ -154,9 +154,9 @@ class _MapPageState extends State<MapPage> {
 
               /// 🔍 Search + Direction Toggle
               Positioned(
-                top: topInset + 76,
-                left: 16,
-                right: 16,
+                top: topInset + 60,
+                left: 12,
+                right: 12,
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
