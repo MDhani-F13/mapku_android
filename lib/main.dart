@@ -3,8 +3,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'pages/login_page.dart';
 import 'pages/register_page.dart';
 import 'pages/map/map_page.dart';
-import 'pages/profile_page.dart';
-import 'connection/auth_service.dart';
 import 'utils/marker_icon_helper.dart';
 
 void main() async {
