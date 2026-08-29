@@ -68,7 +68,6 @@ Create a `docs/screenshots` folder in the repository, add your images, and repla
 
 <p align="center">
   <img src="docs/screenshots/map-page.png" width="30%" alt="Map page" />
-  <img src="docs/screenshots/route-search.png" width="30%" alt="Route search" />
   <img src="docs/screenshots/closure-details.png" width="30%" alt="Road closure details" />
 </p>
 
