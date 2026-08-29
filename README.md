@@ -90,8 +90,7 @@ lib/
 
 This application obtains road-closure and route data from the backend service.
 
-- Backend repository: [BACKEND_REPOSITORY_URL]
-- API base URL: `[API_BASE_URL]`
+- Backend repository: [[BACKEND_REPOSITORY_URL](https://github.com/MDhani-F13/backend_mapku)]
 
 ## Author
 
