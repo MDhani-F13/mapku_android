@@ -96,5 +96,7 @@ This application obtains road-closure and route data from the backend service.
 ## Author
 
 Muhammad Anand Fardhani  
-[LinkedIn Profile URL]
+<a href="www.linkedin.com/in/muhammad-anand-fardhani-1b4484170">
+Linkedin Profile
+</a>
 
